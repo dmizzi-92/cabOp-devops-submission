@@ -1,0 +1,26 @@
+# Git
+.git
+
+# Maven
+**/target/
+
+# IDE
+**/.idea/
+*.iml
+
+# Environment configuration
+.env
+.env.*
+*.env
+
+# Secrets
+secrets/
+
+# GitHub Actions
+.github/
+
+# Terraform
+terraform/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/

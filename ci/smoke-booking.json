@@ -1,0 +1,29 @@
+{
+  "bookingId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "passengerName": "John Smith",
+  "passengerContactNumber": "+35699123456",
+  "pickupTime": "2026-11-16T10:00:00Z",
+  "asap": false,
+  "waitingTime": 5,
+  "noOfPassengers": 2,
+  "price": 18.50,
+  "rating": 5,
+  "tripWayPoints": [
+    {
+      "tripWayPointId": "7b4d62e1-38a5-4f80-91d2-6c0e97b84a13",
+      "lastStop": false,
+      "locality": "Valletta",
+      "lat": 35.8992,
+      "lng": 14.5141,
+      "tripWayPointTimestamp": 0
+    },
+    {
+      "tripWayPointId": "8c5e73f2-49b6-4a91-82e3-7d1f08c95b24",
+      "lastStop": true,
+      "locality": "Sliema",
+      "lat": 35.9122,
+      "lng": 14.5019,
+      "tripWayPointTimestamp": 0
+    }
+  ]
+}

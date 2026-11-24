@@ -1,0 +1,93 @@
+
+# ==========================================
+# Maven / Java build artifacts
+# ==========================================
+**/target/
+*.class
+*.log
+
+# ==========================================
+# IDE configuration
+# ==========================================
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+
+# ==========================================
+# Operating system files
+# ==========================================
+.DS_Store
+Thumbs.db
+*~
+
+# ==========================================
+# Secrets and credentials
+# ==========================================
+# Ignore everything inside secrets/
+secrets/*
+
+# Except the placeholder file
+!secrets/.gitkeep
+
+# Local environment variables
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# ==========================================
+# Spring Boot local configuration
+# ==========================================
+**/application-local.properties
+**/application-dev.properties
+**/application-prod.properties
+
+# ==========================================
+# H2 database files
+# ==========================================
+*.mv.db
+*.trace.db
+*.h2.db
+
+# ==========================================
+# Terraform
+# ==========================================
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.tfvars.json.example
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# ==========================================
+# Temporary files
+# ==========================================
+*.tmp
+*.bak
+*.orig
+
+# ==========================================
+# Jupyter Notebook checkpoints
+# ==========================================
+.ipynb_checkpoints/

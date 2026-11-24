@@ -1,0 +1,147 @@
+# Local integration baseline for eCabs. Kompose can use this as a STARTING POINT
+# for Kubernetes manifests; do not deploy converted YAML to GKE without review.
+name: ecabs-booking
+
+x-rabbitmq-client-env: &rabbitmq-client-env
+  SPRING_RABBITMQ_HOST: &rabbitmq-host rabbitmq
+  SPRING_RABBITMQ_PORT: "5672"
+  SPRING_RABBITMQ_USERNAME: booking_user
+
+services:
+  rabbitmq:
+    # Single-node broker for this assignment; no RabbitMQ clustering configured.
+    image: rabbitmq:4.2.9-management
+    hostname: *rabbitmq-host
+    restart: unless-stopped
+    labels:
+      # Hints for Kompose, ignored by Docker Compose orchestration.
+      kompose.controller.type: statefulset
+      kompose.service.type: headless
+      kompose.volume.type: persistentVolumeClaim
+      kompose.volume.size: 2Gi
+    environment:
+      # Holds initial default_user and default_pass. Never bake into the image.
+      RABBITMQ_CONFIG_FILE: /run/secrets/rabbitmq.conf
+    secrets:
+      - source: rabbitmq_config
+        target: rabbitmq.conf
+    expose:
+      # Required by producer and consumer. Kompose needs a declared AMQP port.
+      - "5672"
+    #ports:
+      # Local development only: keep the management UI off public interfaces.
+      # - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  booking-producer:
+    # Compose builds from repo root because Maven modules depend on booking-contract.
+    # The :local tag MUST be replaced with an Artifact Registry image for GKE.
+    image: ecabs-booking-producer:local
+    build:
+      context: .
+      dockerfile: booking-producer-service/Dockerfile
+    restart: unless-stopped
+    labels:
+      kompose.controller.type: deployment
+      # Keep generated Kubernetes Service internal until exposure is reviewed.
+      kompose.service.type: clusterip
+    environment:
+      <<: *rabbitmq-client-env
+      # Spring Boot 2.3.1: configtree is NOT supported.
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/run/secrets/producer.properties
+    secrets:
+      - source: producer_config
+        target: producer.properties
+    ports:
+      # Verify producer HTTP port from source; only bind locally in Compose.
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      # Compose-only start order; Kompose does not translate depends_on.
+      rabbitmq:
+        condition: service_healthy
+        
+  h2-permissions:
+    image: busybox:1.36
+    user: "0:0"
+    
+    # Kompose conversion hints
+    labels:
+      kompose.image-pull-policy: "IfNotPresent"
+      kompose.volume.type: "persistentVolumeClaim"
+    
+    network_mode: "none"
+    read_only: true
+
+    security_opt:
+      - no-new-privileges:true
+      
+    environment:
+      SPRING_DATASOURCE_URL: "${SPRING_DATASOURCE_URL:-jdbc:h2:file:/data/ecabs}"
+    volumes:
+      - booking_data:/data
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        case "$$SPRING_DATASOURCE_URL" in
+          jdbc:h2:file:/data/*)
+            echo "Persistent H2 detected. Fixing permissions..."
+            chown -R 10001:10001 /data
+            ;;
+          *)
+            echo "In-memory H2 detected. Skipping permissions."
+            ;;
+        esac
+    restart: "no"
+
+  booking-consumer:
+    image: ecabs-booking-consumer:local
+    build:
+      context: .
+      dockerfile: booking-consumer-service/Dockerfile
+    restart: unless-stopped
+    labels:
+      kompose.controller.type: deployment
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -Dlogging.level.org.hibernate.SQL=DEBUG
+        -Dlogging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+    
+      <<: *rabbitmq-client-env
+      SPRING_DATASOURCE_URL: jdbc:h2:file:/data/ecabs
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/run/secrets/consumer.properties
+    secrets:
+      - source: consumer_config
+        target: consumer.properties
+    volumes:
+      - booking_data:/data
+    # The consumer receives RabbitMQ messages; no host HTTP port is assumed.
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+        
+      h2-permissions:
+        condition: service_completed_successfully
+
+
+volumes:
+  # Persistent RabbitMQ state ONLY. Consumer H2 remains in-memory and ephemeral.
+  rabbitmq_data:
+  # Persistent H2 database storage
+  booking_data:
+
+secrets:
+  rabbitmq_config:
+    file: ./secrets/rabbitmq.conf
+  producer_config:
+    file: ./secrets/producer.properties
+  consumer_config:
+    file: ./secrets/consumer.properties

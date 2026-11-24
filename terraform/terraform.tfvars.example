@@ -1,0 +1,3 @@
+project_id             = "example-ecabs-project"
+region                 = "europe-west1"
+artifact_repository_id = "ecabs-bookings"
